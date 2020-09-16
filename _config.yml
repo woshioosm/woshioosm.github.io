@@ -103,4 +103,6 @@ theme: next2
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
-  type: ''
+  type: git
+  repo: git@github.com:woshioosm/woshioosm.github.io.git
+  branch: master
