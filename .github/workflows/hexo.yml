@@ -2,18 +2,16 @@ name: CI
 on:
   push:
     branches:
-      - hexo
+      - master
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v1
-        with:
-          ref: hexo
+        uses: actions/checkout@master
       - name: Use Node.js ${{ matrix.node_version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@master
         with:
           version: ${{ matrix.node_version }}
       - name: Setup hexo
