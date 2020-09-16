@@ -28,6 +28,7 @@ jobs:
           git config --global user.name "lujiahao0708"
           npm install hexo-cli -g
           npm install --save hexo-deployer-git
+          npm install hexo-generator-searchdb --save
           npm install
       - name: Hexo deploy
         run: |
