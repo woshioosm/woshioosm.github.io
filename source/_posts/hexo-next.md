@@ -1,5 +1,6 @@
 ---
 title: 基于github 搭建hexo+next博客
+date: 2020-09-18
 categories: hexo
 tags:
  - hexo

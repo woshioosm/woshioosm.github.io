@@ -1,5 +1,6 @@
 ---
 title: Hello World
+date: 2020-09-16
 categories: Testing
 tags:
  - hexo
