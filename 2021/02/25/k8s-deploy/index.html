@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.yarwen.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="k8s 部署 系统配置 （master和node节点均执行）12345678910111213141516171819201) 服务器开启硬件虚拟化支持2) 操作系统版本大于CentOS7.53) 关闭SElinux和Firewalld服务# systemctl stop firewalld.service    # sed -i &amp;#x27;s&#x2F;SELINUX&#x3D;enforcing&#x2F;SELINUX">
+<meta property="og:type" content="article">
+<meta property="og:title" content="k8s 部署记录">
+<meta property="og:url" content="http://blog.yarwen.com/2021/02/25/k8s-deploy/index.html">
+<meta property="og:site_name" content="woshi·oosm">
+<meta property="og:description" content="k8s 部署 系统配置 （master和node节点均执行）12345678910111213141516171819201) 服务器开启硬件虚拟化支持2) 操作系统版本大于CentOS7.53) 关闭SElinux和Firewalld服务# systemctl stop firewalld.service    # sed -i &amp;#x27;s&#x2F;SELINUX&#x3D;enforcing&#x2F;SELINUX">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-02-25T15:15:38.000Z">
+<meta property="article:modified_time" content="2021-04-20T09:39:10.746Z">
+<meta property="article:author" content="shuimiao">
+<meta property="article:tag" content="k8s">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://blog.yarwen.com/2021/02/25/k8s-deploy/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>k8s 部署记录 | woshi·oosm</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">woshi·oosm</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://blog.yarwen.com/2021/02/25/k8s-deploy/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="shuimiao">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="woshi·oosm">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          k8s 部署记录
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-02-25 15:15:38" itemprop="dateCreated datePublished" datetime="2021-02-25T15:15:38+00:00">2021-02-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-04-20 09:39:10" itemprop="dateModified" datetime="2021-04-20T09:39:10+00:00">2021-04-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/k8s/" itemprop="url" rel="index"><span itemprop="name">k8s</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="k8s-部署"><a href="#k8s-部署" class="headerlink" title="k8s 部署"></a>k8s 部署</h1><ol>
+<li>系统配置 （master和node节点均执行）<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">1) 服务器开启硬件虚拟化支持</span><br><span class="line">2) 操作系统版本大于CentOS7.5</span><br><span class="line">3) 关闭SElinux和Firewalld服务</span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl stop firewalld.service    </span></span><br><span class="line"><span class="meta">#</span><span class="bash"> sed -i <span class="string">&#x27;s/SELINUX=enforcing/SELINUX=disabled/g&#x27;</span> /etc/sysconfig/selinux</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> setenforce 0</span></span><br><span class="line">4) 设置hostname并在/etc/hosts配置本地解析；</span><br><span class="line"><span class="meta">#</span><span class="bash"> hostnamectl set-hostname master</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> vi /etc/hosts （添加配置所有节点的hostname和ip）</span></span><br><span class="line">5) 关闭Swap服务</span><br><span class="line"><span class="meta">#</span><span class="bash"> swapoff -a</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> vm.swappiness=0 &gt;&gt; /etc/sysctl.conf</span></span><br><span class="line">6) 修改sysctl.conf （如果 cat /etc/sysctl.conf 已存在以下值，则可以直接修改）</span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> <span class="string">&quot;net.ipv4.ip_forward = 1&quot;</span> &gt;&gt; /etc/sysctl.conf</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> <span class="string">&quot;net.bridge.bridge-nf-call-ip6tables = 1&quot;</span> &gt;&gt; /etc/sysctl.conf</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> <span class="string">&quot;net.bridge.bridge-nf-call-iptables = 1&quot;</span> &gt;&gt; /etc/sysctl.conf</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> modprobe br_netfilter</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> sysctl -p</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> service network restart</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<a id="more"></a>
+<ol start="2">
+<li>安装docker （master和node节点均执行）<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">1) 如果已安装过旧版本需要删除</span><br><span class="line"><span class="meta">#</span><span class="bash"> yum -y remove docker-client docker-client-latest docker-common docker-latest docker-logrotate docker-latest-logrotate \ docker-selinux docker-engine-selinux docker-engine</span></span><br><span class="line"></span><br><span class="line">2) 设置阿里云docker仓库，并安装Docker服务</span><br><span class="line"><span class="meta">#</span><span class="bash"> yum -y install yum-utils lvm2 device-mapper-persistent-data nfs-utils xfsprogs wget</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> yum -y install docker-ce docker-ce-cli containerd.io</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl <span class="built_in">enable</span> docker</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl start docker</span></span><br></pre></td></tr></table></figure>
+
+
+</li>
+</ol>
+<ol start="3">
+<li>安装K8S服务 （master和node节点均执行）<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">1) 如果已安装过旧版本，需要删除：</span><br><span class="line"><span class="meta">#</span><span class="bash"> yum -y remove kubelet kubadm kubctl</span></span><br><span class="line"></span><br><span class="line">2) 设置阿里云的仓库,并安装新版本</span><br><span class="line"><span class="meta">#</span><span class="bash"> cat &gt; /etc/yum.repos.d/kubernetes.repo &lt;&lt; EOF</span></span><br><span class="line">[kubernetes]</span><br><span class="line">name=Kubernetes</span><br><span class="line">baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64</span><br><span class="line">enabled=1</span><br><span class="line">gpgcheck=0</span><br><span class="line">repo_gpgcheck=0</span><br><span class="line">gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">3）安装kubelet kubeadm kubectl</span><br><span class="line"><span class="meta">#</span><span class="bash"> yum -y install kubelet kubeadm kubectl --disableexcludes=kubernetes</span></span><br><span class="line"></span><br><span class="line">4) 修改Docker Cgroup Driver为systemd，如果不修改则在后续添加Worker节点时可能会遇到“detected cgroupfs as ths Docker driver.xx”的报错信息，并配置Docker本地镜像库；</span><br><span class="line"><span class="meta">#</span><span class="bash"> cat &gt; /etc/docker/daemon.json &lt;&lt;EOF</span></span><br><span class="line">&#123;</span><br><span class="line">    &quot;exec-opts&quot;: [&quot;native.cgroupdriver=systemd&quot;],</span><br><span class="line">    &quot;log-driver&quot;: &quot;json-file&quot;,</span><br><span class="line">    &quot;log-opts&quot;: &#123;</span><br><span class="line">    &quot;max-size&quot;: &quot;100m&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;storage-driver&quot;: &quot;overlay2&quot;,</span><br><span class="line">    &quot;registry-mirrors&quot;:[</span><br><span class="line">        &quot;https://kfwkfulq.mirror.aliyuncs.com&quot;,</span><br><span class="line">        &quot;https://2lqq34jg.mirror.aliyuncs.com&quot;,</span><br><span class="line">        &quot;https://pee6w651.mirror.aliyuncs.com&quot;,</span><br><span class="line">        &quot;http://hub-mirror.c.163.com&quot;,</span><br><span class="line">        &quot;https://docker.mirrors.ustc.edu.cn&quot;,</span><br><span class="line">        &quot;https://registry.docker-cn.com&quot;</span><br><span class="line">    ]</span><br><span class="line">&#125;</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">5) 重启Docker，并启动Kubelet</span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl daemon-reload</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl restart docker</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl <span class="built_in">enable</span> kubelet</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> systemctl start kubelet</span></span><br></pre></td></tr></table></figure>
+
+
+</li>
+</ol>
+<ol start="4">
+<li>配置master节点<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">1) 配置环境变量：</span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> <span class="built_in">export</span> MASTER_IP=10.0.0.11 &gt; k8s.env.sh</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> <span class="built_in">export</span> APISERVER_NAME=master &gt;&gt; k8s.env.sh</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> sh k8s.env.sh</span></span><br><span class="line">2) Master节点初始化：</span><br><span class="line"><span class="meta">#</span><span class="bash"> kubeadm init \</span></span><br><span class="line">        --apiserver-advertise-address 0.0.0.0 \</span><br><span class="line">        --apiserver-bind-port 6443 \</span><br><span class="line">        --cert-dir /etc/kubernetes/pki \</span><br><span class="line">        --control-plane-endpoint master \</span><br><span class="line">        --image-repository registry.cn-hangzhou.aliyuncs.com/google_containers \</span><br><span class="line">        --kubernetes-version 1.20.4 \</span><br><span class="line">        --pod-network-cidr 10.11.0.0/16 \</span><br><span class="line">        --service-cidr 10.20.0.0/16 \</span><br><span class="line">        --service-dns-domain cluster.local \</span><br><span class="line">        --upload-certs </span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p>参数说明</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">--apiserver-advertise-address 0.0.0.0 \</span><br><span class="line"># API 服务器所公布的其正在监听的 IP 地址,指定“0.0.0.0”以使用默认网络接口的地址</span><br><span class="line"># 切记只可以是内网IP，不能是外网IP，如果有多网卡，可以使用此选项指定某个网卡</span><br><span class="line">--apiserver-bind-port 6443 \</span><br><span class="line"># API 服务器绑定的端口,默认 6443</span><br><span class="line">--cert-dir &#x2F;etc&#x2F;kubernetes&#x2F;pki \</span><br><span class="line"># 保存和存储证书的路径，默认值：&quot;&#x2F;etc&#x2F;kubernetes&#x2F;pki&quot;</span><br><span class="line">--control-plane-endpoint kuber4s.api \</span><br><span class="line"># 为控制平面指定一个稳定的 IP 地址或 DNS 名称,</span><br><span class="line"># 这里指定的 kuber4s.api 已经在 &#x2F;etc&#x2F;hosts 配置解析为本机IP</span><br><span class="line">--image-repository registry.cn-hangzhou.aliyuncs.com&#x2F;google_containers \</span><br><span class="line"># 选择用于拉取Control-plane的镜像的容器仓库，默认值：&quot;k8s.gcr.io&quot;</span><br><span class="line"># 因 Google被墙，这里选择国内仓库</span><br><span class="line">--kubernetes-version 1.17.3 \</span><br><span class="line"># 为Control-plane选择一个特定的 Kubernetes 版本， 默认值：&quot;stable-1&quot;</span><br><span class="line">--node-name master01 \</span><br><span class="line">#  指定节点的名称,不指定的话为主机hostname，默认可以不指定</span><br><span class="line">--pod-network-cidr 10.10.0.0&#x2F;16 \</span><br><span class="line"># 指定pod的IP地址范围</span><br><span class="line">--service-cidr 10.20.0.0&#x2F;16 \</span><br><span class="line"># 指定Service的VIP地址范围</span><br><span class="line">--service-dns-domain cluster.local \</span><br><span class="line"># 为Service另外指定域名，默认&quot;cluster.local&quot;</span><br><span class="line">--upload-certs</span><br><span class="line"># 将 Control-plane 证书上传到 kubeadm-certs Secret</span><br></pre></td></tr></table></figure>
+
+<ol start="5">
+<li><p>master init后续操作</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 根据init后的输出内容提示执行命令即可</span><br><span class="line">mkdir -p $HOME&#x2F;.kube</span><br><span class="line">sudo cp -i &#x2F;etc&#x2F;kubernetes&#x2F;admin.conf $HOME&#x2F;.kube&#x2F;config</span><br><span class="line">sudo chown $(id -u):$(id -g) $HOME&#x2F;.kube&#x2F;config</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>node 节点安装</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1. 执行之前的前3步（注意hostname和hosts文件区分）</span><br><span class="line">2. 添加master的环境变量</span><br><span class="line"><span class="meta">#</span><span class="bash"> scp master:/root/k8s.env.sh .</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> sh k8s.env.sh</span></span><br><span class="line">2. 执行（来自于master 安装成功后的输出内容） </span><br><span class="line"><span class="meta">#</span><span class="bash">  kubeadm join master:6443 --token 7msc5c.bd6nelghcc7ik3g2 \</span></span><br><span class="line">    --discovery-token-ca-cert-hash sha256:99eda6366dc9c1b13282bca34cf359ab4cd2c3454530ca9f0f773dde62c4fc3c </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>网络配置</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">在master节点上安装flannel:（试过有问题 不用）</span><br><span class="line"><span class="meta">#</span><span class="bash"> kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml</span></span><br><span class="line">或者安装 calico （flannel中存在问题  pod无法访问其他node 暂时没有解决）</span><br><span class="line"><span class="meta">#</span><span class="bash"> kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>检查</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">//显示master和node全都Ready 即安装成功</span><br><span class="line"><span class="meta">#</span><span class="bash"> kubectl get nodes  </span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>存在问题</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">1) node节点执行kubectl： The connection to the server localhost:8080 was refused - did you specify the right host or port?</span><br><span class="line">// 把master节点的配置文件copy到node节点</span><br><span class="line"><span class="meta">#</span><span class="bash"> scp -r /etc/kubernetes/admin.conf <span class="variable">$&#123;node1&#125;</span>:/etc/kubernetes/admin.conf</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">echo</span> <span class="built_in">export</span> KUBECONFIG=/etc/kubernetes/admin.conf &gt;&gt; ~/.bash_profile</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> <span class="built_in">source</span> ~/.bash_profile</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">2) 在搭建k8s集群并整合flannel时，即使关闭了防火墙跨主机间容器、pod始终无法ping通 （目前不用flannel 作废）</span><br><span class="line"><span class="meta">#</span><span class="bash"> iptables -P INPUT ACCEPT</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> iptables -P FORWARD ACCEPT</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> iptables -F</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> iptables -L -n</span></span><br><span class="line"></span><br><span class="line">3) 搭建ingress-nginx</span><br><span class="line">kubectl apply -f mandatory.yaml </span><br><span class="line">// 存在nodeport和hostnetwork两种模式 采用的是hostnetwork模式</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>搭建本地镜像仓库 </p>
+</li>
+</ol>
+<ul>
+<li><p>安装registry</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -d -p 5001:5000 -v &#x2F;opt&#x2F;data&#x2F;registry:&#x2F;var&#x2F;lib&#x2F;registry -v &#x2F;opt&#x2F;data&#x2F;registry&#x2F;srv-config.yml:&#x2F;etc&#x2F;docker&#x2F;registry&#x2F;config.yml --privileged&#x3D;true --restart&#x3D;always docker.io&#x2F;registry </span><br></pre></td></tr></table></figure>
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="number">0.1</span></span><br><span class="line"><span class="attr">log:</span></span><br><span class="line">  <span class="attr">fields:</span></span><br><span class="line">    <span class="attr">service:</span> <span class="string">registry</span></span><br><span class="line"><span class="attr">storage:</span></span><br><span class="line">  <span class="attr">delete:</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">cache:</span></span><br><span class="line">    <span class="attr">blobdescriptor:</span> <span class="string">inmemory</span></span><br><span class="line">  <span class="attr">filesystem:</span></span><br><span class="line">    <span class="attr">rootdirectory:</span> <span class="string">/var/lib/registry</span></span><br><span class="line"><span class="attr">http:</span></span><br><span class="line">  <span class="attr">addr:</span> <span class="string">:5000</span></span><br><span class="line">  <span class="attr">headers:</span></span><br><span class="line">    <span class="attr">X-Content-Type-Options:</span> [<span class="string">nosniff</span>]</span><br><span class="line"><span class="attr">health:</span></span><br><span class="line">  <span class="attr">storagedriver:</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">interval:</span> <span class="string">10s</span></span><br><span class="line">    <span class="attr">threshold:</span> <span class="number">3</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装registry ui</p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">docker pull hyper&#x2F;docker-registry-web</span><br><span class="line">docker run -d --name registry-web --restart&#x3D;always -p 8000:8080 -v &#x2F;opt&#x2F;data&#x2F;registry&#x2F;web-config.yml:&#x2F;conf&#x2F;config.yml hyper&#x2F;docker-registry-web</span><br><span class="line">&#x2F;&#x2F;  http:&#x2F;&#x2F;121.5.158.16:8000&#x2F;  ui地址</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">registry:</span></span><br><span class="line">  <span class="comment"># Docker registry url</span></span><br><span class="line">  <span class="attr">url:</span> <span class="string">http://x.x.x.x:5001/v2</span></span><br><span class="line">  <span class="comment"># Docker registry fqdn</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">localhost:5001</span></span><br><span class="line">  <span class="comment"># To allow image delete, should be false</span></span><br><span class="line">  <span class="attr">readonly:</span> <span class="literal">false</span></span><br><span class="line">  <span class="attr">auth:</span></span><br><span class="line">    <span class="comment"># Disable authentication</span></span><br><span class="line">    <span class="attr">enabled:</span> <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>解决“Http: server gave HTTP response to HTTPS client”<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 在 /etc/docker/daemon.json 中添加 (在push的那台主机上添加)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="attr">&quot;insecure-registries&quot;</span>: [<span class="string">&quot;x.x.x.x:5001&quot;</span>]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<ol start="11">
+<li><p>安装metrics-server 支持HPA</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">1. 修改yml</span><br><span class="line">   - --kubelet-insecure-tls</span><br><span class="line">   - --kubelet-preferred-address-types&#x3D;InternalIP</span><br><span class="line"></span><br><span class="line">2. 配置新镜像地址 （暂时找了个最新可用的）</span><br><span class="line">   docker pull bitnami&#x2F;metrics-server:0.4.2</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果获取不到镜像</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">1. 腾讯云申请一台按时付费的硅谷服务器</span><br><span class="line">2. 登陆</span><br><span class="line"># yum install docker</span><br><span class="line">&#x2F;&#x2F; 在 &#x2F;etc&#x2F;docker&#x2F;daemon.json 中添加 (在push的那台主机上添加 本地registry地址)</span><br><span class="line">&#123;</span><br><span class="line">    &quot;insecure-registries&quot;: [&quot;x.x.x.x:5000&quot;]  </span><br><span class="line">&#125;</span><br><span class="line"># systemctl daemon-reload</span><br><span class="line"># systemctl enable docker</span><br><span class="line"># systemctl start docker</span><br><span class="line">3. 保存以下脚本 docker.sh</span><br><span class="line">docker pull $1</span><br><span class="line">new&#x3D;$&#123;1&#x2F;gcr.io&#x2F;x.x.x.x:5001&#125;</span><br><span class="line">docker tag  $1 $new</span><br><span class="line">docker push $new</span><br><span class="line">echo $new</span><br><span class="line">4. 执行脚本</span><br><span class="line"># sh dcoker.sh 目标镜像</span><br><span class="line"></span><br><span class="line">5. 在镜像库ui上查询 http:&#x2F;&#x2F;x.x.x.x:8000&#x2F;</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/k8s/" rel="tag"># k8s</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/12/23/serverless/" rel="prev" title="serverless 学习">
+      <i class="fa fa-chevron-left"></i> serverless 学习
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/26/ingress-nginx/" rel="next" title="ingress-nginx">
+      ingress-nginx <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#k8s-%E9%83%A8%E7%BD%B2"><span class="nav-number">1.</span> <span class="nav-text">k8s 部署</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">shuimiao</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">shuimiao</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

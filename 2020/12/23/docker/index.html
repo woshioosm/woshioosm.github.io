@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.yarwen.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="简介对部分使用命令进行记录">
+<meta property="og:type" content="article">
+<meta property="og:title" content="docker 学习">
+<meta property="og:url" content="http://blog.yarwen.com/2020/12/23/docker/index.html">
+<meta property="og:site_name" content="woshi·oosm">
+<meta property="og:description" content="简介对部分使用命令进行记录">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-23T15:15:38.000Z">
+<meta property="article:modified_time" content="2021-04-20T09:39:10.746Z">
+<meta property="article:author" content="shuimiao">
+<meta property="article:tag" content="docker">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://blog.yarwen.com/2020/12/23/docker/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>docker 学习 | woshi·oosm</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">woshi·oosm</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://blog.yarwen.com/2020/12/23/docker/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="shuimiao">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="woshi·oosm">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          docker 学习
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-23 15:15:38" itemprop="dateCreated datePublished" datetime="2020-12-23T15:15:38+00:00">2020-12-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-04-20 09:39:10" itemprop="dateModified" datetime="2021-04-20T09:39:10+00:00">2021-04-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/docker/" itemprop="url" rel="index"><span itemprop="name">docker</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>对部分使用命令进行记录</p>
+<a id="more"></a>
+
+
+<h1 id="命令"><a href="#命令" class="headerlink" title="命令"></a>命令</h1><ul>
+<li>docker run<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">-d (--detach 启动守护容器,后台运行)</span><br><span class="line">-i (--interactive 保持标准输入流)</span><br><span class="line">-t (--tty 为容器分配一个虚拟终端)</span><br><span class="line">-e (--env 传递环境变量)</span><br><span class="line">-v (挂载数据卷 -v 存储卷地址:容器内地址:读写权限)</span><br><span class="line">--name (指定命名空间)</span><br><span class="line">--read-only （只读文件系统）</span><br><span class="line">--rm 容器进入退出状态时，被自动删除</span><br><span class="line">docker run -it sth &#x2F;bin&#x2F;sh</span><br></pre></td></tr></table></figure></li>
+<li>docker create (创建但是不启动)</li>
+<li>docker ps</li>
+<li>docker rename old new</li>
+<li>docker start/stop/restart sth</li>
+<li>docker rm sth </li>
+<li>docker logs sth -f</li>
+<li>docker exec (在运行的容器中运行额外的进程)<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker exec sth ps</span><br><span class="line">docker exec -it sth sh</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<h2 id="持久化容器"><a href="#持久化容器" class="headerlink" title="持久化容器"></a>持久化容器</h2><h3 id="自动重启容器"><a href="#自动重启容器" class="headerlink" title="自动重启容器"></a>自动重启容器</h3><p>–start</p>
+<ul>
+<li>从不重启（默认）</li>
+<li>检测到故障时尝试重启 on-failure</li>
+<li>在容器非正常退出时重启容器，最多重启n次  on-failure:n</li>
+<li>检测到故障时，在一段预定的时间后重新开始尝试重启 </li>
+<li>不管任何条件，始终重新启动容器 always </li>
+<li>在容器退出时总是重启容器，但是不考虑在Docker守护进程启动时就已经停止了的容器 unless-stopped</li>
+</ul>
+<h3 id="维持容器的运行状态"><a href="#维持容器的运行状态" class="headerlink" title="维持容器的运行状态"></a>维持容器的运行状态</h3><ul>
+<li>supervisord</li>
+<li>init</li>
+<li>systemd</li>
+<li>runit</li>
+<li>upstart</li>
+</ul>
+<h1 id="软件安装"><a href="#软件安装" class="headerlink" title="软件安装"></a>软件安装</h1><h2 id="仓库"><a href="#仓库" class="headerlink" title="仓库"></a>仓库</h2><p>仓库是一个有名字的镜像桶，名字类似与URL。仓库名由该镜像所在的主机，拥有该镜像的用户账户和一个简短的名称组成。</p>
+<h2 id="镜像"><a href="#镜像" class="headerlink" title="镜像"></a>镜像</h2><ul>
+<li>发布镜像<ul>
+<li>命令行</li>
+<li>Dockerfile</li>
+</ul>
+</li>
+<li>docker search sth</li>
+</ul>
+<h1 id="存储卷"><a href="#存储卷" class="headerlink" title="存储卷"></a>存储卷</h1><h2 id="绑定挂载卷"><a href="#绑定挂载卷" class="headerlink" title="绑定挂载卷"></a>绑定挂载卷</h2><h2 id="Docker管理卷"><a href="#Docker管理卷" class="headerlink" title="Docker管理卷"></a>Docker管理卷</h2><h1 id="网络"><a href="#网络" class="headerlink" title="网络"></a>网络</h1><h2 id="Closed容器-只有回环接口"><a href="#Closed容器-只有回环接口" class="headerlink" title="Closed容器:只有回环接口"></a>Closed容器:只有回环接口</h2><ul>
+<li>–net none</li>
+<li>容器外的程序无法连接到该网络接口</li>
+<li>容器内的程序无法访问到容器外的网络<h2 id="Bridged容器：私有接口和回环接口"><a href="#Bridged容器：私有接口和回环接口" class="headerlink" title="Bridged容器：私有接口和回环接口"></a>Bridged容器：私有接口和回环接口</h2></li>
+<li>–net bridge</li>
+<li>最常见的网络容器原型<ul>
+<li>私有的本地回环接口</li>
+<li>私有接口通过网桥连接到主机的其他容器</li>
+</ul>
+</li>
+<li>自定义命名解析<ul>
+<li>–hostname xx   会在该容器的DNS中添加一条记录，这条记录会将提供的主机名映射成该容器的桥接ip地址</li>
+<li>–dns 8.8.8.8  用来指定一个或者多个DNS服务器</li>
+<li>–dns-search xx  指定一个DNS查找域，这个查找域就像host名的一个默认后缀，在查询时，任何不包括已知顶级域名的主机名都会自动加上该后缀名（可以多次添加）<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run --dns-search docker.com xxx nslookup registry.hub   &#x2F;&#x2F; 会解析registry.hub.docker.com的ip</span><br></pre></td></tr></table></figure></li>
+<li>–add-host 自定义从主机名到ip地址的映射关系<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run --add-host test:10.10.10.255 sth nslookup test</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li>开放对容器的访问<ul>
+<li>默认的网络拓扑结构没有提供任何从主机外部接口到容器接口的路由</li>
+<li>-p (–publish选项) 在主机网络栈上的端口和容器端口之间创建映射关系<ul>
+<li>docker run -p 3333  将容器端口绑定到所有主机接口的一个动态端口上</li>
+<li>docker run -p 3333:3333 将一个具体的容器端口绑定到所有主机接口的某一个具体端口上</li>
+<li>docker run -p 192.168.0.32::2222  将容器绑定到拥有指定ip地址的主机接口的动态端口上</li>
+<li>docker run -p 192.168.0.32:1111:1111  将容器端口绑定到拥有指定ip的主机接口的的一个具体端口上</li>
+</ul>
+</li>
+<li>-P (–publish-all选项)  将容器的端口都暴露出去<ul>
+<li>–expose 将端口添加到-P 选项的端口列表中 </li>
+</ul>
+</li>
+<li>docker port sth 查看端口映射</li>
+</ul>
+</li>
+<li>跨容器通信<ul>
+<li>所有的本地bridged 容器都是在同一个桥接网络上，并且默认情况下能够互相通信</li>
+<li>默认情况下，容器对本地的其他容器是完全开放的</li>
+<li>可以选择关闭容器之间的网络连接（如多租户情况下）<ul>
+<li>–ice=false 除非被显式允许的流量，否则任何从容器到容器的网络流量都会被主机的防火墙阻止</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>修改网桥接口的配置<ul>
+<li>定义网桥的地址和子网</li>
+<li>定义容器所能获取的IP地址的范围</li>
+<li>定义最大传输单元（MTU）</li>
+</ul>
+</li>
+</ul>
+<h2 id="Joined容器"><a href="#Joined容器" class="headerlink" title="Joined容器"></a>Joined容器</h2><h2 id="Open容器"><a href="#Open容器" class="headerlink" title="Open容器"></a>Open容器</h2>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/docker/" rel="tag"># docker</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/11/12/consul/" rel="prev" title="consul 详解">
+      <i class="fa fa-chevron-left"></i> consul 详解
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/12/23/serverless/" rel="next" title="serverless 学习">
+      serverless 学习 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4"><span class="nav-number">2.</span> <span class="nav-text">命令</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%81%E4%B9%85%E5%8C%96%E5%AE%B9%E5%99%A8"><span class="nav-number">2.1.</span> <span class="nav-text">持久化容器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%8A%A8%E9%87%8D%E5%90%AF%E5%AE%B9%E5%99%A8"><span class="nav-number">2.1.1.</span> <span class="nav-text">自动重启容器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%B4%E6%8C%81%E5%AE%B9%E5%99%A8%E7%9A%84%E8%BF%90%E8%A1%8C%E7%8A%B6%E6%80%81"><span class="nav-number">2.1.2.</span> <span class="nav-text">维持容器的运行状态</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BD%AF%E4%BB%B6%E5%AE%89%E8%A3%85"><span class="nav-number">3.</span> <span class="nav-text">软件安装</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%93%E5%BA%93"><span class="nav-number">3.1.</span> <span class="nav-text">仓库</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%95%9C%E5%83%8F"><span class="nav-number">3.2.</span> <span class="nav-text">镜像</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AD%98%E5%82%A8%E5%8D%B7"><span class="nav-number">4.</span> <span class="nav-text">存储卷</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%91%E5%AE%9A%E6%8C%82%E8%BD%BD%E5%8D%B7"><span class="nav-number">4.1.</span> <span class="nav-text">绑定挂载卷</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Docker%E7%AE%A1%E7%90%86%E5%8D%B7"><span class="nav-number">4.2.</span> <span class="nav-text">Docker管理卷</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C"><span class="nav-number">5.</span> <span class="nav-text">网络</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Closed%E5%AE%B9%E5%99%A8-%E5%8F%AA%E6%9C%89%E5%9B%9E%E7%8E%AF%E6%8E%A5%E5%8F%A3"><span class="nav-number">5.1.</span> <span class="nav-text">Closed容器:只有回环接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Bridged%E5%AE%B9%E5%99%A8%EF%BC%9A%E7%A7%81%E6%9C%89%E6%8E%A5%E5%8F%A3%E5%92%8C%E5%9B%9E%E7%8E%AF%E6%8E%A5%E5%8F%A3"><span class="nav-number">5.2.</span> <span class="nav-text">Bridged容器：私有接口和回环接口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Joined%E5%AE%B9%E5%99%A8"><span class="nav-number">5.3.</span> <span class="nav-text">Joined容器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Open%E5%AE%B9%E5%99%A8"><span class="nav-number">5.4.</span> <span class="nav-text">Open容器</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">shuimiao</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">shuimiao</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

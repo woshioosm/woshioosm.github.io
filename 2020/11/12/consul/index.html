@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.yarwen.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="简介Consul 是一个支持多数据中心分布式高可用的服务发现和配置共享的服务软件,由 HashiCorp 公司用 Go 语言开发, 基于 MPL 2.0 的协议进行开源.   service mesh solution providing a full featured control plane with service discovery, configuration, and segment">
+<meta property="og:type" content="article">
+<meta property="og:title" content="consul 详解">
+<meta property="og:url" content="http://blog.yarwen.com/2020/11/12/consul/index.html">
+<meta property="og:site_name" content="woshi·oosm">
+<meta property="og:description" content="简介Consul 是一个支持多数据中心分布式高可用的服务发现和配置共享的服务软件,由 HashiCorp 公司用 Go 语言开发, 基于 MPL 2.0 的协议进行开源.   service mesh solution providing a full featured control plane with service discovery, configuration, and segment">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/compare.png">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/consul-arch.png">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/use.jpeg">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/acl.png">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/gossip.gif">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/protocol.png">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/raft.jpg">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/term.png">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/raft-process.jpg">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/sync.jpg">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/leader-crash.jpg">
+<meta property="og:image" content="http://blog.yarwen.com/2020/11/12/consul/commit.png">
+<meta property="article:published_time" content="2020-11-12T15:15:38.000Z">
+<meta property="article:modified_time" content="2021-04-20T09:39:10.718Z">
+<meta property="article:author" content="shuimiao">
+<meta property="article:tag" content="consul">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://blog.yarwen.com/2020/11/12/consul/compare.png">
+
+<link rel="canonical" href="http://blog.yarwen.com/2020/11/12/consul/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>consul 详解 | woshi·oosm</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">woshi·oosm</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://blog.yarwen.com/2020/11/12/consul/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="shuimiao">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="woshi·oosm">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          consul 详解
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-11-12 15:15:38" itemprop="dateCreated datePublished" datetime="2020-11-12T15:15:38+00:00">2020-11-12</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-04-20 09:39:10" itemprop="dateModified" datetime="2021-04-20T09:39:10+00:00">2021-04-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/consul/" itemprop="url" rel="index"><span itemprop="name">consul</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>Consul 是一个支持多数据中心分布式高可用的服务发现和配置共享的服务软件,由 HashiCorp 公司用 Go 语言开发, 基于 MPL 2.0 的协议进行开源. </p>
+<ul>
+<li>service mesh solution providing a full featured control plane with service discovery, configuration, and segmentation functionality</li>
+<li>requires a data plane and supports both a proxy and native integration model.</li>
+<li>ships with a simple built-in proxy,supports 3rd party proxy integrations</li>
+</ul>
+<a id="more"></a>
+<h2 id="功能"><a href="#功能" class="headerlink" title="功能"></a>功能</h2><ol>
+<li>服务发现:<br>提供了通过DNS或者HTTP接口的方式来注册服务和发现服务。</li>
+<li>健康检查:<br>Consul的Client可以提供任意数量的健康检查，既可以与给定的服务相关联(“webserver是否返回200 OK”)，也可以与本地节点相关联(“内存利用率是否低于90%”)。操作员可以使用这些信息来监视集群的健康状况，服务发现组件可以使用这些信息将流量从不健康的主机路由出去。</li>
+<li>key/value 存储:<br>应用程序可以根据自己的需要使用Consul提供的Key/Value存储， Consul提供了简单易用的HTTP接口，结合其他工具可以实现动态配置、功能标记、领袖选举等等功能。</li>
+<li>安全服务通信:<br>Consul可以为服务生成和分发TLS证书，以建立相互的TLS连接。</li>
+<li>多数据中心:<br>Consul支持开箱即用的多数据中心. 这意味着用户不需要担心需要建立额外的抽象层让业务扩展到多个区域。</li>
+</ol>
+<h2 id="对比"><a href="#对比" class="headerlink" title="对比"></a>对比</h2><p><img src="/2020/11/12/consul/compare.png" alt="123"></p>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><h3 id="构成"><a href="#构成" class="headerlink" title="构成"></a>构成</h3><ul>
+<li>Server：运行Server模式的Agent，参与Raft quorum，维护集群的状态，响应RPC读写，与其他数据中心交互WAN gossip，转发查询到Leader或远程数据中心。</li>
+<li>Client ：运行client模式的Agent，将所有的RPCs转发到Server。Client是相对无状态的。Client唯一所做的是在后台参与LAN gossip pool。只消耗少量的资源，少量的网络带宽。 </li>
+<li>Datacenter：每个数据中心有自己独立的leader，数据中心之间不会进行选举和数据同步，只会对请求进行转发。</li>
+<li>Consensus:  Consensus 来表明就 leader 选举和事务的顺序达成一致</li>
+<li>LAN Gossip：指的是LAN gossip pool，包含位于同一个局域网或者数据中心的节点</li>
+<li>WAN Gossip:指的是WAN gossip pool，只包含server节点，这些server主要分布在不同的数据中心或者通信是基于互联网或广域网的</li>
+<li>RPC： 远程过程调用。是允许client请求服务器的请求/响应机制</li>
+</ul>
+<h3 id="启动端口说明"><a href="#启动端口说明" class="headerlink" title="启动端口说明"></a>启动端口说明</h3><ul>
+<li>DNS: The DNS server (TCP and UDP)   8600</li>
+<li>HTTP: The HTTP API (TCP Only)  8500</li>
+<li>LAN Serf: The Serf LAN port (TCP and UDP)   8301</li>
+<li>Wan Serf: The Serf WAN port (TCP and UDP)   8302</li>
+<li>server: Server RPC address (TCP Only)  8300</li>
+</ul>
+<p><img src="/2020/11/12/consul/consul-arch.png" alt="123"></p>
+<ul>
+<li>采用clients和servers混部模式，server建议三到五台，client没有限制，可以轻松扩展到成千上万台。</li>
+<li>gossip协议<ul>
+<li>维护成员关系</li>
+<li>了解集群中还有哪些成员和其健康状况</li>
+</ul>
+</li>
+<li>每个数据中心的servers都是属于一个Raft peer<ul>
+<li>leader 负责所有的查询和事务</li>
+<li>事务通过Consensus协议负复制到所有的参与者</li>
+<li>当一个非leader收到一个rpc请求，它会转发给leader</li>
+</ul>
+</li>
+<li>lan gossip<ul>
+<li>同一数据中心，所有节点</li>
+<li>没有必要为client配置所有服务器地址参数,发现是自动完成的</li>
+<li>健康检查故障的工作不是放在服务器上，而是分布在客户端的，这使故障检测比心跳机制更可扩展性；也支持节点自身的健康检查</li>
+<li>可用来作为消息层通知重要的事件</li>
+</ul>
+</li>
+<li>wan gossip<ul>
+<li>跨数据中心，仅server</li>
+<li>具有更高的延迟，包括了其他consul集群的server节点</li>
+<li>数据中心能够彼此发现，将一个新的数据中心加入现有的WAN gossip也很容易</li>
+<li>当一个server接收对于另一个不同集群的请求时，它发送到指定集群的随机的一台server上，然后该server会转发给leader</li>
+<li>数据中心低耦合，但通过错误检测，链接缓存复用，跨数据中心的请求相对较快和可靠</li>
+</ul>
+</li>
+<li>在某些场景，client agent 可以缓存数据<ul>
+<li>对一些认证和链路进行缓存</li>
+<li>某些api终端支持可选的结果缓存，部分的服务发现和链接授权可以在server暂时不可用时从client获取</li>
+</ul>
+</li>
+<li>集群内数据的读写请求既可以直接发到Server，也可以通过Client使用RPC转发到Server，请求最终会到达Leader节点，在允许数据轻微陈旧的情况下，读请求也可以在普通的Server节点完成</li>
+</ul>
+<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p><img src="/2020/11/12/consul/use.jpeg" alt="app"></p>
+<h1 id="功能详解"><a href="#功能详解" class="headerlink" title="功能详解"></a>功能详解</h1><h2 id="服务发现"><a href="#服务发现" class="headerlink" title="服务发现"></a>服务发现</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 注册</span><br><span class="line">curl  --request PUT  --data @&#x2F;Users&#x2F;miaoshui&#x2F;D&#x2F;data&#x2F;consul&#x2F;test.json http:&#x2F;&#x2F;localhost:8900&#x2F;v1&#x2F;agent&#x2F;service&#x2F;register</span><br><span class="line">&#x2F;&#x2F; 订阅</span><br><span class="line">curl  http:&#x2F;&#x2F;localhost:8900&#x2F;v1&#x2F;agent&#x2F;service&#x2F;test111 (serviceId 且唯一)</span><br><span class="line">curl  http:&#x2F;&#x2F;localhost:8903&#x2F;v1&#x2F;catalog&#x2F;service&#x2F;test （serviceName）</span><br><span class="line">&#x2F;&#x2F; 解除注册</span><br><span class="line">curl --request PUT http:&#x2F;&#x2F;127.0.0.1:8900&#x2F;v1&#x2F;agent&#x2F;service&#x2F;deregister&#x2F;test111</span><br></pre></td></tr></table></figure>
+<h2 id="KV-存储"><a href="#KV-存储" class="headerlink" title="KV 存储"></a>KV 存储</h2><ul>
+<li>支持键值对的读取</li>
+<li>支持建立多级目录</li>
+<li>base64-encoded blob</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">// 增，改</span><br><span class="line">curl --request PUT --data “12345” http://127.0.0.1:8900/v1/kv/test1</span><br><span class="line">// 查</span><br><span class="line">curl http://127.0.0.1:8900/v1/kv/test1</span><br><span class="line">// 支持多层级</span><br><span class="line">curl http://127.0.0.1:8900/v1/kv/city/town</span><br><span class="line">// 删除</span><br><span class="line">curl -X DELETE http://127.0.0.1:8900/v1/kv/test1</span><br></pre></td></tr></table></figure>
+
+<h2 id="健康检查"><a href="#健康检查" class="headerlink" title="健康检查"></a>健康检查</h2><p>在注册服务时，指定consul回调的接口</p>
+<ul>
+<li>script+interval</li>
+<li>http+interval</li>
+<li>tcp+interval</li>
+<li>time to live</li>
+<li>docker+interval</li>
+<li>grpc+interval</li>
+<li>alias<blockquote>
+<p>ref <a target="_blank" rel="noopener" href="https://www.consul.io/docs/discovery/checks">https://www.consul.io/docs/discovery/checks</a></p>
+</blockquote>
+</li>
+</ul>
+<h2 id="ACL"><a href="#ACL" class="headerlink" title="ACL"></a>ACL</h2><p>基础组成<br><img src="/2020/11/12/consul/acl.png" alt="123"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 基础操作</span><br><span class="line">curl --header &quot;X-Consul-Token:dcb93655-0661-4ea1-bfc4-e5744317f99e&quot; http:&#x2F;&#x2F;127.0.0.1:8910&#x2F;v1&#x2F;agent&#x2F;members</span><br><span class="line">curl http:&#x2F;&#x2F;127.0.0.1:8910&#x2F;v1&#x2F;agent&#x2F;members</span><br></pre></td></tr></table></figure>
+<ol>
+<li>token<br>最终生成被用户使用，一个token可以被赋予多个roles或者多个policies</li>
+<li>policies<br>具体的权限控制策略<br>demo:<figure class="highlight h"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">service <span class="string">&quot;magpie&quot;</span> &#123;</span><br><span class="line">	policy = <span class="string">&quot;write&quot;</span></span><br><span class="line">&#125;</span><br><span class="line">service <span class="string">&quot;magpie-sidecar-proxy&quot;</span> &#123;</span><br><span class="line">	policy = <span class="string">&quot;write&quot;</span></span><br><span class="line">&#125;</span><br><span class="line">service_prefix <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">	policy = <span class="string">&quot;read&quot;</span></span><br><span class="line">&#125;</span><br><span class="line">node_prefix <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">	policy = <span class="string">&quot;read&quot;</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure></li>
+<li>roles<br>关联了多个policies的角色</li>
+</ol>
+<h2 id="加密"><a href="#加密" class="headerlink" title="加密"></a>加密</h2><p> Consul Agent支持对其所有的网络数据流进行加密，有两个独立的加密系统：Gossip Traffic和RPC</p>
+<ul>
+<li>Gossip Encryption<ul>
+<li>启用Gossip加密方式，只需要在启动Agent时设置加密密钥</li>
+<li>Key值必须是16字节，基于base64编码</li>
+<li>consul keygen命令来生成满足要求的加密密钥</li>
+<li>Consul集群中所有的节点必须使用相同的加密key——便于接收发送集群信息</li>
+</ul>
+</li>
+<li>RPC Encryption with TLS<ul>
+<li>Consul支持使用TLS校验server和client的授权</li>
+<li>Consul要求所有的客户端和服务器都有由独立的证书颁发机构生成的密钥对</li>
+<li>一个私有CA，只在内部使用。CA为每个代理签发密钥</li>
+</ul>
+</li>
+</ul>
+<h2 id="其他API功能点"><a href="#其他API功能点" class="headerlink" title="其他API功能点"></a>其他API功能点</h2><ol>
+<li>watch 机制 (cli指令)<br>Watches是查看指定数据信息的一种方法，比如查看nodes列表、键值对、健康检查。当监控到更新时，可以调用外部处理程序——可以自定义。比如，发现健康状态发生变化可以通知外部系统健康异常。<br>支持如下类型：</li>
+</ol>
+<ul>
+<li>Key – 监视指定K/V键值对</li>
+<li>Keyprefix – Watch a prefix in the KV store</li>
+<li>Services – 监视服务列表</li>
+<li>nodes – 监控节点列表</li>
+<li>service – 监视服务实例</li>
+<li>checks- 监视健康检查的值</li>
+<li>event – 监视用户事件<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">consul watch -typeservice -service redis &#x2F;usr&#x2F;bin&#x2F;my-service-handler.sh</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;&#x2F; 可以在配置文件中配置触发path</span><br><span class="line">&#123;</span><br><span class="line">  &quot;watches&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;type&quot;: &quot;checks&quot;,</span><br><span class="line">      &quot;handler_type&quot;: &quot;http&quot;,</span><br><span class="line">      &quot;state&quot;: &quot;critical&quot;,</span><br><span class="line">      &quot;http_handler_config&quot;: &#123;</span><br><span class="line">        &quot;path&quot;: &quot;http:&#x2F;&#x2F;192.168.80.71:9000&#x2F;notice&quot;,</span><br><span class="line">        &quot;method&quot;: &quot;POST&quot;,</span><br><span class="line">        &quot;timeout&quot;: &quot;10s&quot;,</span><br><span class="line">        &quot;header&quot;: &#123; &quot;Authorization&quot;: [ &quot;token&quot; ] &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<ol start="2">
+<li><p>event （api和cli）<br>可以通过api触发事件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;consul watch -type&#x3D;event -name&#x3D;helloserviceevent &#x2F;Use&#x2F;cuixin&#x2F;ConsulStudy&#x2F;mac-dev&#x2F;echo_handler.sh -helloservice</span><br><span class="line"></span><br><span class="line">curl \</span><br><span class="line">    --request PUT \</span><br><span class="line">    --data @payload \</span><br><span class="line">    http:&#x2F;&#x2F;127.0.0.1:8500&#x2F;v1&#x2F;event&#x2F;fire&#x2F;helloserviceevent</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>blocking query </p>
+<ul>
+<li>用来对一个可能发生变化的节点进行长轮询</li>
+<li>通过设置 wait 参数，来设置长轮询的等待时间</li>
+<li>最大十分钟，默认五分钟</li>
+</ul>
+</li>
+<li><p>Consistency Modes</p>
+<ul>
+<li>default:  默认获取强一致性数据， 只有在新leader 选举过程中有可能获取到脏数据</li>
+<li>consistent ： 确认一致性，需要leader和其他节点确认自己仍然是leader后再读取数据</li>
+<li>steal： 允许从非leader节点上读取数据， 即使集群不可用也可以读取数据</li>
+</ul>
+</li>
+<li><p>Filtering</p>
+<ul>
+<li>返回数据之前，将在Consul服务器上执行过滤，从而减少了网络负载<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -G &lt;path&gt; --data-urlencode &#39;filter&#x3D;&lt;filter expression&gt;&#39;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+<li><p>Agent Caching</p>
+<ul>
+<li>simple: 简单缓存</li>
+<li>background refresh：后台刷新缓存 (background blocking query)</li>
+</ul>
+</li>
+</ol>
+<h2 id="Consul-工具"><a href="#Consul-工具" class="headerlink" title="Consul 工具"></a>Consul 工具</h2><h3 id="consul-templete"><a href="#consul-templete" class="headerlink" title="consul templete"></a>consul templete</h3><ol>
+<li>概念</li>
+</ol>
+<ul>
+<li>Consul-Template是基于Consul的自动替换配置文件的应用。</li>
+<li>Consul-Template提供了一个便捷的方式从Consul中获取存储的值，Consul-Template守护进程会查询Consul实例来更新系统上指定的任何模板。当更新完成后，模板还可以选择运行一些任意的命令。</li>
+<li><a target="_blank" rel="noopener" href="https://github.com/hashicorp/consul-template">https://github.com/hashicorp/consul-template</a></li>
+</ul>
+<ol start="2">
+<li>场景<br>Consul-Template可以查询Consul中的服务目录、Key、Key-values等。这种强大的抽象功能和查询语言模板可以使Consul-Template特别适合动态的创建配置文件。例如：创建Apache/Nginx Proxy Balancers、Haproxy Backends、Varnish Servers、Application Configurations等。</li>
+<li>特点</li>
+</ol>
+<ul>
+<li>Quiescence：Consul-Template内置静止平衡功能，可以智能的发现Consul实例中的更改信息。这个功能可以防止频繁的更新模板而引起系统的波动。</li>
+<li>Dry Mode：不确定当前架构的状态，担心模板的变化会破坏子系统？无须担心。因为Consul-Template还有Dry模式。在Dry模式，Consul-Template会将结果呈现在STDOUT，所以操作员可以检查输出是否正常，以决定更换模板是否安全。</li>
+<li>CLI and Config：Consul-Template同时支持命令行和配置文件。</li>
+<li>Verbose Debugging：即使每件事你都做的近乎完美，但是有时候还是会有失败发生。Consul-Template可以提供更详细的Debug日志信息。<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3></li>
+<li>Envconsul： 从consul中读取并设置环境变量给其他进程</li>
+<li>Consul ESM ： 提供外部的服务监控</li>
+<li>Consul Migrate : 数据迁移工具</li>
+<li>Consul Replicate：跨中心的kv数据复制</li>
+</ul>
+<h1 id="操作演示"><a href="#操作演示" class="headerlink" title="操作演示"></a>操作演示</h1><ol>
+<li><p>拉取镜像</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker pull consul</span><br></pre></td></tr></table></figure></li>
+<li><p>启动</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#启动第1个Server节点，集群要求要有3个Server，将容器8500端口映射到主机8900端口，同时开启管理界面</span></span><br><span class="line">docker run -d --name=consul1 -p 8900:8500 -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">true</span> --bootstrap-expect=3 --client=0.0.0.0 -ui</span><br><span class="line"> </span><br><span class="line"><span class="comment">#启动第2个Server节点，并加入集群</span></span><br><span class="line">docker run -d --name=consul2 -p 8901:8500 -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">true</span> --bootstrap-expect=3 --client=0.0.0.0 --join 172.17.0.2</span><br><span class="line"> </span><br><span class="line"><span class="comment">#启动第3个Server节点，并加入集群</span></span><br><span class="line">docker run -d --name=consul3 -p 8902:8500 -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">true</span> --bootstrap-expect=3 --client=0.0.0.0 --join 172.17.0.2</span><br><span class="line"> </span><br><span class="line"><span class="comment">#启动第4个Client节点，并加入集群</span></span><br><span class="line">docker run -d --name=consul4 -p 8903:8500 -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">false</span> --client=0.0.0.0 --join 172.17.0.2</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>可以再创建一个中心</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#启动第1个Server节点，集群要求要有3个Server，将容器8500端口映射到主机8900端口，同时开启管理界面</span></span><br><span class="line">docker run -d --name=bj_consul1 -p 8910:8500 -v /Users/miaoshui/D/data/consul/consul_bj1/config:/consul/config -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">true</span> --bootstrap-expect=1 --client=0.0.0.0  -datacenter=dc2 -ui</span><br><span class="line"></span><br><span class="line">// 开启acl 放置在目录下 acl.hcl</span><br><span class="line">primary_datacenter = <span class="string">&quot;dc2&quot;</span></span><br><span class="line">acl &#123;</span><br><span class="line">  enabled = <span class="literal">true</span></span><br><span class="line">  default_policy = <span class="string">&quot;deny&quot;</span></span><br><span class="line">  enable_token_persistence = <span class="literal">true</span></span><br><span class="line">  tokens &#123;</span><br><span class="line">    master = <span class="string">&quot;dcb93655-0661-4ea1-bfc4-e5744317f99e&quot;</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">docker inspect -f <span class="string">&#x27;&#123;&#123;.NetworkSettings.IPAddress&#125;&#125;&#x27;</span> bj_consul1</span><br><span class="line"> </span><br><span class="line"><span class="comment">#启动第2个Server节点，并加入集群</span></span><br><span class="line">docker run -d --name=bj_consul2 -p 8911:8500 -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">true</span> --bootstrap-expect=3 --client=0.0.0.0 --join 172.17.0.6 -datacenter=dc2 </span><br><span class="line"> </span><br><span class="line"><span class="comment">#启动第3个Server节点，并加入集群</span></span><br><span class="line">docker run -d --name=bj_consul3 -p 8912:8500 -e CONSUL_BIND_INTERFACE=eth0 consul agent --server=<span class="literal">true</span> --bootstrap-expect=3 --client=0.0.0.0 --join 172.17.0.6 -datacenter=dc2 </span><br><span class="line"> </span><br></pre></td></tr></table></figure>
+<p>关联</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker exec bj_consul1 consul join -wan 172.17.0.2</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>可以进入容器查看</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker <span class="built_in">exec</span> -it consul1 sh</span><br><span class="line">docker container update --restart=always  // 重启后 容器也启动</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>api</p>
+</li>
+</ol>
+<ul>
+<li>java客户端使用方式<br>有 orbitz 与 ecwid，<br>ecwid是spring-cloud-consul-core的依赖包</li>
+<li>注册发现和健康检查<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">ConsulClient client = <span class="keyword">new</span> ConsulClient(<span class="string">&quot;localhost&quot;</span>, <span class="number">8900</span>);</span><br><span class="line"><span class="comment">// consul的格式化服务</span></span><br><span class="line">NewService service = <span class="keyword">new</span> NewService();</span><br><span class="line">service.setAddress(ip);</span><br><span class="line">service.setPort(port);</span><br><span class="line">service.setId(ip + <span class="string">&quot;:&quot;</span> + port);</span><br><span class="line">service.setName(<span class="string">&quot;magpie&quot;</span>);</span><br><span class="line"><span class="comment">// 健康检查</span></span><br><span class="line">NewService.Check check = <span class="keyword">new</span> NewService.Check();</span><br><span class="line">check.setHttp(<span class="string">&quot;http://192.168.0.106:8080/health&quot;</span>);</span><br><span class="line">check.setInterval(<span class="string">&quot;1000ms&quot;</span>);</span><br><span class="line">service.setCheck(check);</span><br><span class="line"><span class="comment">// 进行注册</span></span><br><span class="line">client.agentServiceRegister(service);</span><br><span class="line"><span class="comment">// 进行订阅 （需要自己订阅）</span></span><br><span class="line"> HealthServicesRequest request = HealthServicesRequest.newBuilder()</span><br><span class="line">                .setQueryParams(QueryParams.DEFAULT)</span><br><span class="line">                .setPassing(<span class="keyword">true</span>)</span><br><span class="line">                .build();</span><br><span class="line">Response&lt;List&lt;HealthService&gt;&gt;client.getHealthServices(service, request);</span><br><span class="line"><span class="comment">// 客户端主动检查（需要自己轮询）</span></span><br><span class="line">client.agentCheckPass(key, <span class="keyword">null</span>);</span><br></pre></td></tr></table></figure></li>
+<li>kv 数据存储<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">byte</span>[] binaryData = <span class="keyword">new</span> <span class="keyword">byte</span>[] &#123;<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>,<span class="number">6</span>,<span class="number">7</span>&#125;;</span><br><span class="line">client.setKVBinaryValue(<span class="string">&quot;someKey&quot;</span>, binaryData);</span><br><span class="line"></span><br><span class="line">client.setKVValue(<span class="string">&quot;com.my.app.foo&quot;</span>, <span class="string">&quot;foo&quot;</span>);</span><br><span class="line"></span><br><span class="line">Response&lt;GetValue&gt; keyValueResponse = client.getKVValue(<span class="string">&quot;com.my.app.foo&quot;</span>);</span><br><span class="line">System.out.println(keyValueResponse.getValue().getKey() + <span class="string">&quot;: &quot;</span> + keyValueResponse.getValue().getDecodedValue()); <span class="comment">// prints &quot;com.my.app.foo: foo&quot;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+</li>
+</ul>
+<h1 id="协议"><a href="#协议" class="headerlink" title="协议"></a>协议</h1><h3 id="Gossip"><a href="#Gossip" class="headerlink" title="Gossip"></a>Gossip</h3><ul>
+<li>概念: 是基于流行病传播方式的节点或者进程之间信息交换的协议,Gossip协议的主要用途就是信息传播和扩散。它们也被用于数据库复制，信息扩散，集群成员身份确认，故障探测等。基于Gossip协议的一些有名的系统：Apache Cassandra，Redis（Cluster模式），Consul等</li>
+<li>分类<ul>
+<li>LAN ： 包含一个数据中心内所有的client和server <ul>
+<li>client可以自动发现服务，减少配置信息</li>
+<li>分布式的错误检测，可以快速被集群共享</li>
+<li>支持可靠快速的事件广播</li>
+</ul>
+</li>
+<li>WAN<ul>
+<li>所有集群的server都会加入</li>
+<li>server 可以处理跨集群的请求</li>
+<li>错误检测可以处理整个远程集群或者其中一台的链接丢失</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>算法<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">1、Gossip 是周期性的散播消息，把周期限定为 1 秒</span><br><span class="line">2、被感染节点随机选择 k 个邻接节点（fan-out）散播消息（如果 fan-out 设置为 2，每次最多往 2 个节点散播）</span><br><span class="line">3、每次散播消息都选择尚未发送过的节点进行散播</span><br><span class="line">4、收到消息的节点不再往发送节点散播，比如 A -&gt; B，那么 B 进行散播的时候，不再发给 A。</span><br></pre></td></tr></table></figure>
+<img src="/2020/11/12/consul/gossip.gif" alt="gossip1"></li>
+<li>传播方式<ul>
+<li>Anti-Entropy （以固定的概率传播所有的数据）：反熵传播过程是每个节点周期性地随机选择其他节点，然后通过互相交换自己的所有数据来消除两者之间的差异<ul>
+<li>Suspective:处于 susceptible 状态的节点代表其并没有收到来自其他节点的更新</li>
+<li>Infective：处于 infective 状态的节点代表其有数据更新，并且会将这个数据分享给其他节点</li>
+<li>缺点:每次节点两两交换自己的所有数据会带来非常大的通信负担</li>
+</ul>
+</li>
+<li>Rumor-Mongering (以固定的概率仅传播新到达的数据): 谣言传播过程是消息只包含最新 update，谣言消息在某个时间点之后会被标记为removed，并且不再被传播<ul>
+<li>Suspective</li>
+<li>Infective </li>
+<li>Removed:其已经接收到来自其他节点的更新，但是其并不会将这个更新分享给其他节点</li>
+<li>缺点:系统有一定的概率会不一致，通常用于节点间数据增量同步</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="Raft"><a href="#Raft" class="headerlink" title="Raft"></a>Raft</h3><p><img src="/2020/11/12/consul/protocol.png" alt="protocol"></p>
+<h4 id="算法解释"><a href="#算法解释" class="headerlink" title="算法解释"></a>算法解释</h4><ol>
+<li><p>角色</p>
+<ul>
+<li>Leader 接受客户端请求，并向Follower同步请求日志，当日志同步到大多数节点上后告诉Follower提交日志。</li>
+<li>Follower 接受并持久化Leader同步的日志，在Leader告之日志可以提交之后，提交日志。</li>
+<li>Candidate Leader选举过程中的临时角色。</li>
+</ul>
+</li>
+<li><p>角色状态转换<br><img src="/2020/11/12/consul/raft.jpg" alt="raft"></p>
+</li>
+<li><p>任期<br><img src="/2020/11/12/consul/term.png" alt="term"><br>Raft算法将时间分为一个个的任期（term），每一个term的开始都是Leader选举。在成功选举Leader之后，Leader会在整个term内管理整个集群。如果Leader选举失败，该term就会因为没有Leader而结束。</p>
+</li>
+</ol>
+<p>参考动画：</p>
+<ol>
+<li><a target="_blank" rel="noopener" href="http://thesecretlivesofdata.com/raft/">http://thesecretlivesofdata.com/raft/</a></li>
+<li><a target="_blank" rel="noopener" href="https://raft.github.io/">https://raft.github.io/</a></li>
+</ol>
+<p>几个子问题：</p>
+<ul>
+<li>Leader Election</li>
+<li>Log Replication</li>
+<li>Safety</li>
+</ul>
+<ol>
+<li>选举</li>
+</ol>
+<ul>
+<li>服务器启动时，初始化为follower， leader向所有followers 周期性发送心跳，如果follow在选举超时时间内没有收到leader的心跳，则等待一段随机时间后发起一次leader选举。</li>
+<li>follower 将其term加一然后转换为candidate； 首先给自己投票并且给集群的其他服务器发送RequestVoteRpc（最后一条日志记录的term_id和index）</li>
+<li>规则<ul>
+<li>Term<ul>
+<li>候选人的 Term 必须大于投票者的 Term，否则就立马拒绝投票</li>
+</ul>
+</li>
+<li>候选人最后一条日志<ul>
+<li>候选人的最后一条日志的 Term 要大于投票者的最后一条日志的 Term（保证日志最新） 或者当它们的最后一条日志的 Term 相同时，候选人最后一条日志的 Index 要大于等于投票者（保证日志最长）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>出现三种情况<ul>
+<li>赢得多数的选票，成功选举为leader</li>
+<li>收到了leader的消息，标识其他的服务器已经抢先当选了leader</li>
+<li>没有服务器赢得多数的选票，leader选举失败，等待选举时间超时后发起下一次选举（随机超时）<br><img src="/2020/11/12/consul/raft-process.jpg" alt="raft-porcess">       </li>
+</ul>
+</li>
+</ul>
+<ol start="2">
+<li>日志同步</li>
+</ol>
+<p>当Leader被选出来后，就可以接受客户端发来的请求了，每个请求包含一条需要被replicated state machines执行的命令。leader会把它作为一个log entry append到日志中，然后给其它的server发AppendEntriesRPC请求。当Leader确定一个log entry被safely replicated了（大多数副本已经将该命令写入日志当中），就apply这条log entry到状态机中然后返回结果给客户端。如果某个Follower宕机了或者运行的很慢，或者网络丢包了，则会一直给这个Follower发AppendEntriesRPC直到日志一致。</p>
+<p>当一条日志是commited时，Leader才可以将它应用到状态机中。Raft保证一条commited的log entry已经持久化了并且会被所有的节点执行。<br><img src="/2020/11/12/consul/sync.jpg" alt="sync"></p>
+<p>当一个新的Leader被选出来时，它的日志和其它的Follower的日志可能不一样，这个时候，就需要一个机制来保证日志的一致性。一个新leader产生时，集群状态可能如下：<br><img src="/2020/11/12/consul/leader-crash.jpg" alt="crash"><br>以leader和b为例：</p>
+<p>初始化，nextIndex为11，leader给b发送AppendEntriesRPC(6,10)，b在自己log的10号槽位中没有找到term_id为6的log entry。则给leader回应一个拒绝消息。接着，leader将nextIndex减一，变成10，然后给b发送AppendEntriesRPC(6, 9)，b在自己log的9号槽位中同样没有找到term_id为6的log entry。循环下去，直到leader发送了AppendEntriesRPC(4,4)，b在自己log的槽位4中找到了term_id为4的log entry。接收了消息。随后，leader就可以从槽位5开始给b推送日志了。</p>
+<ol start="3">
+<li>安全性</li>
+</ol>
+<ul>
+<li>拥有最新的已提交的log entry的Follower才有资格成为Leader。<blockquote>
+<p>这个保证是在RequestVote RPC中做的，Candidate在发送RequestVote RPC时，要带上自己的最后一条日志的term和log index，其他节点收到消息时，如果&gt;现自己的日志比请求中携带的更新，则拒绝投票。日志比较的原则是，如果本地的最后一条log entry的term更大，则term大的更新，如果term一样大，则log index更大的更新。</p>
+</blockquote>
+</li>
+<li>日志提交限制<blockquote>
+<p>Leader只能推进commit index来提交当前term的已经复制到大多数服务器上的日志，旧term日志的提交要等到提交当前term的日志来间接提交（log index 小于 commit index的日志被间接提交）。</p>
+</blockquote>
+</li>
+</ul>
+<p><img src="/2020/11/12/consul/commit.png" alt="commit"></p>
+<p>在阶段a，term为2，S1是Leader，且S1写入日志（term, index）为(2, 2)，并且日志被同步写入了S2；</p>
+<p>在阶段b，S1离线，触发一次新的选主，此时S5被选为新的Leader，此时系统term为3，且写入了日志（term, index）为（3， 2）;</p>
+<p>S5尚未将日志推送到Followers就离线了，进而触发了一次新的选主，而之前离线的S1经过重新上线后被选中变成Leader，此时系统term为4，此时S1会将自己的日志同步到Followers，按照上图就是将日志（2， 2）同步到了S3，而此时由于该日志已经被同步到了多数节点（S1, S2, S3），因此，此时日志（2，2）可以被提交了。；</p>
+<p>在阶段d，S1又下线了，触发一次选主，而S5有可能被选为新的Leader（这是因为S5可以满足作为主的一切条件：1. term = 5 &gt; 4，2. 最新的日志为（3，2），比大多数节点（如S2/S3/S4的日志都新），然后S5会将自己的日志更新到Followers，于是S2、S3中已经被提交的日志（2，2）被截断了。</p>
+<p>针对上述情况就是：即使日志（2，2）已经被大多数节点（S1、S2、S3）确认了，但是它不能被Commit，因为它是来自之前term(2)的日志，直到S1在当前term（4）产生的日志（4， 3）被大多数Follower确认，S1方可Commit（4，3）这条日志，当然，根据Raft定义，（4，3）之前的所有日志也会被Commit。此时即使S1再下线，重新选主时S5不可能成为Leader，因为它没有包含大多数节点已经拥有的日志（4，3）。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/consul/" rel="tag"># consul</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/10/15/spring-circle-ref/" rel="prev" title="spring 循环依赖问题">
+      <i class="fa fa-chevron-left"></i> spring 循环依赖问题
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/12/23/docker/" rel="next" title="docker 学习">
+      docker 学习 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD"><span class="nav-number">1.1.</span> <span class="nav-text">功能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94"><span class="nav-number">1.2.</span> <span class="nav-text">对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9E%B6%E6%9E%84"><span class="nav-number">1.3.</span> <span class="nav-text">架构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9E%84%E6%88%90"><span class="nav-number">1.3.1.</span> <span class="nav-text">构成</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8%E7%AB%AF%E5%8F%A3%E8%AF%B4%E6%98%8E"><span class="nav-number">1.3.2.</span> <span class="nav-text">启动端口说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%94%E7%94%A8"><span class="nav-number">1.3.3.</span> <span class="nav-text">应用</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E8%AF%A6%E8%A7%A3"><span class="nav-number">2.</span> <span class="nav-text">功能详解</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0"><span class="nav-number">2.1.</span> <span class="nav-text">服务发现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#KV-%E5%AD%98%E5%82%A8"><span class="nav-number">2.2.</span> <span class="nav-text">KV 存储</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%81%A5%E5%BA%B7%E6%A3%80%E6%9F%A5"><span class="nav-number">2.3.</span> <span class="nav-text">健康检查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ACL"><span class="nav-number">2.4.</span> <span class="nav-text">ACL</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A0%E5%AF%86"><span class="nav-number">2.5.</span> <span class="nav-text">加密</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96API%E5%8A%9F%E8%83%BD%E7%82%B9"><span class="nav-number">2.6.</span> <span class="nav-text">其他API功能点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Consul-%E5%B7%A5%E5%85%B7"><span class="nav-number">2.7.</span> <span class="nav-text">Consul 工具</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#consul-templete"><span class="nav-number">2.7.1.</span> <span class="nav-text">consul templete</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%B6%E4%BB%96"><span class="nav-number">2.7.2.</span> <span class="nav-text">其他</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%93%8D%E4%BD%9C%E6%BC%94%E7%A4%BA"><span class="nav-number">3.</span> <span class="nav-text">操作演示</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8D%8F%E8%AE%AE"><span class="nav-number">4.</span> <span class="nav-text">协议</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Gossip"><span class="nav-number">4.0.1.</span> <span class="nav-text">Gossip</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Raft"><span class="nav-number">4.0.2.</span> <span class="nav-text">Raft</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%AE%97%E6%B3%95%E8%A7%A3%E9%87%8A"><span class="nav-number">4.0.2.1.</span> <span class="nav-text">算法解释</span></a></li></ol></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">shuimiao</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">11</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">shuimiao</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
